@@ -1,0 +1,12 @@
+{
+  "models_in_service":{
+    "OpenAI":["gpt-4o" , "gpt-4-turbo" , "gpt-3"],
+    "Google Gemini": ["gemini-pro" , "gemini-1.5-flash-latest", "gemini-1.5-pro-latest" , "gemini-pro-vision"],
+    "Ollama": ["llama3" , "mistral"]
+  },
+  "summaryModel":{
+    "OpenAI": ["gpt-4o","gpt-4-turbo"],
+    "Google Gemini": ["gemini-1.5-flash-latest" ,"gemini-1.5-pro-latest"],
+    "Ollama": ["llava","llava-llama3","bakllava"]
+  }
+}
