@@ -1,7 +1,12 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+pdfimages/
+path/
 *.py[cod]
 *$py.class
+*.pdf
+multiModalRAG.py
+.DS_Store
 
 # C extensions
 *.so
