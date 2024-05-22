@@ -3,6 +3,7 @@
 import streamlit as st
 import json
 import dataLoader
+import modelLever
 
 module_name = "drawUI"
 
@@ -70,6 +71,9 @@ def initSession():
     # Options of summary vision models
     if "summaryModelSelOptions" not in st.session_state:
         st.session_state.summaryModelSelOptions = []
+    # Add a blob to store the retriever
+    if "vectorretriever" not in st.session_state:
+        st.session_state.vectorretriever = {}
 
 
 def drawUI(title):
@@ -105,10 +109,11 @@ def drawUI(title):
             disabled=st.session_state.summaryModelDisabled,
             index=None
         )
-        pdfFile = st.file_uploader("Upload your pdf file  from here", type=["pdf"], disabled=st.session_state.uploaderDisabled)
-        if (pdfFile is not None) and (st.session_state.summaryModelSel != "Please select the model"):
+        pdfFile = st.file_uploader("Upload your pdf file  from here" , key = "fileuploader", type=["pdf"], disabled=st.session_state.uploaderDisabled)
+        if (pdfFile is not None) and (st.session_state.summaryModelSel != "Please select the model") and (st.session_state.uploaderDisabled == False):
             with st.spinner("Processing PDF..."):
                 dataLoader.processData(pdfFile)
+                st.session_state.uploaderDisabled = True
         st.divider()
         # Below are the model service options of RAG query
         st.selectbox(
@@ -141,6 +146,7 @@ def drawUI(title):
         with st.chat_message("assistant"):
             with st.spinner("Thinking"):
                 # trigger the agent chat call
-                response = "This is the test response. Please replace this line with meaningful agent call"
+                #response = "This is the test response. Please replace this line with meaningful agent call"
+                response = modelLever.askLLM(prompt)
                 st.write(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
