@@ -12,9 +12,9 @@ def readConf(confPath):
     with open(confPath, "r") as confFile:
         confData = json.load(confFile)
     st.session_state.confData = confData
-    apiServices = [key for key in confData["models_in_service"].keys()]
+    ragModel = [key for key in confData["ragModel"].keys()]
     summaryModelServices = [key for key in confData["summaryModel"].keys()]
-    st.session_state.apiServiceList = apiServices
+    st.session_state.apiServiceList = ragModel
     st.session_state.summaryModelService = summaryModelServices
 
 
@@ -29,7 +29,7 @@ def serviceSelect():
     if ("serviceSel" not in st.session_state) or bool(st.session_state["serviceSel"]):
         # if  bool(st.session_state["serviceSel"]):
         st.session_state.modelSelDisabled = False
-        st.session_state.modelSelOptions = confData["models_in_service"][st.session_state["serviceSel"]]
+        st.session_state.modelSelOptions = confData["ragModel"][st.session_state["serviceSel"]]
     else:
         st.session_state.modelSelOptions = []
         st.session_state.modelSelDisabled = True
@@ -81,7 +81,7 @@ def drawUI(title):
     #Initialize the chat window
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.write(message["content"])
+            st.write(message["content"] , unsafe_allow_html = True)
     #Create configuration side menu
     with st.sidebar:
     #Create blocks of options to process the pdf data
@@ -117,7 +117,7 @@ def drawUI(title):
         st.divider()
         # Below are the model service options of RAG query
         st.selectbox(
-            label="Please select the model service",
+            label="Please choose the service for the RAG query",
             options=st.session_state.apiServiceList,
             key="serviceSel",
             index=None,
@@ -125,7 +125,7 @@ def drawUI(title):
             placeholder="Please choose the model service"
         )
         st.selectbox(
-            label="Please select the model",
+            label="Choose the model for RAG query",
             options=st.session_state.modelSelOptions,
             disabled=st.session_state.modelSelDisabled,
             key="modelSel",
@@ -148,5 +148,5 @@ def drawUI(title):
                 # trigger the agent chat call
                 #response = "This is the test response. Please replace this line with meaningful agent call"
                 response = modelLever.askLLM(prompt)
-                st.write(response)
+                st.write(response , unsafe_allow_html = True)
         st.session_state.messages.append({"role": "assistant", "content": response})

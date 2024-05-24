@@ -31,7 +31,8 @@ def ExtractDataFromPDF(pdfFileContent):
         text = pageContent.get_text()
         textElements.append(text)
         # Extract Tables
-        tables = pageContent.find_tables()
+        tables = pageContent.find_tables(horizontal_strategy="lines", vertical_strategy="text")
+        #tables = pageContent.find_tables(strategy = "lines")
         for table in tables:
             # Save the content of table in the csv format in the list
             tableElements.append(table.extract())
