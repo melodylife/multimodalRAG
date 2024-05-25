@@ -30,6 +30,7 @@ import datetime
 import base64
 import uuid
 import io
+import re
 
 model_name = "modelLever"
 
@@ -55,6 +56,26 @@ def generatePromptwithImageList(importData):
     content_parts.append(text_part)
     return [HumanMessage(content=content_parts)]
 
+def generatePromptwithImageListTest(importData):
+    ctxDataList = importData["txtData"]
+    imageList = importData["imageData"]
+    prompt = importData["prompt"]
+    sysMsg = f"You'll be provided with multiple context contents including images, tables and texts. Answer the question only based on the context contents provided. Say I don't know if you can't find any relevent contents fro the context contents for the questions. Question: {prompt}"
+    print(f"The length of image list {len(imageList)}. The length of text list is {len(ctxDataList)}\n")
+    sysmsg_parts = []
+    sysmsg_parts.append({"type": "text" , "text": sysMsg})
+    SysMsg = SystemMessage(content = sysmsg_parts)
+    content_parts = []
+    for imgData in imageList:
+        image_part = {
+            "type": "image_url",
+            "image_url": f"data:image/jpeg;base64,{imgData}",
+        }
+        content_parts.append(image_part)
+    for txtData in ctxDataList:
+        text_part = {"type": "text", "text": txtData}
+        content_parts.append(text_part)
+    return [SysMsg , HumanMessage(content=content_parts)]
 
 # generate multimodal prompt for Gemini and Ollama
 def generatePrompt(importData):
@@ -71,6 +92,7 @@ def generatePrompt(importData):
     sys_parts.append(text_part)
     sys_prompt_msg = SystemMessage(content=sys_parts)
     return [sys_prompt_msg, HumanMessage(content=content_parts)]
+    return [HumanMessage(content=content_parts)]
 
 # generate multimodal prompt template for OpenAI
 
@@ -120,7 +142,7 @@ def createModel():
 
 def interpretImage(imgEncBase64):
     # prompt = "You are an experienced data analyst. You are collecting earning data of multiple companies. You will be presented with multiple contents in the format of text, tables or images. Read the metrics in the content carefully and extract the data relevant to financial performance of the company. Summarize the the content concisely."
-    prompt = "You will be presented with multiple file pages. The pages will be including texts. tables ,chart and images. describe the page contents by extracting the information from it and summarize the the content with key information like name, subject, metrics, chart, table content from it. ."
+    prompt = "You are an experienced data analyst who are good at interpret financial report. You will be presented with multiple file pages. The pages will be including texts, tables ,chart and images. describe the page contents by extracting the information from it and summarize the the content with key information like name, subject, metrics, chart, table content from it."
     llm = createModel()
     if st.session_state.summaryService == "OpenAI":
         promptTempwithImage = generateOpenAIImagePrompt()
@@ -129,17 +151,18 @@ def interpretImage(imgEncBase64):
         # OpenAI as OpenAI only accept the image size smaller than 2000x768 and larger than 512x512
         chain = chat_prompt_template | llm | StrOutputParser()
         response = chain.invoke({"imageData": imgEncBase64, "promptData": prompt})
-        print(response)
+        #print(response)
         return response
     chain = generatePrompt | llm | StrOutputParser()
     response = chain.invoke({"imageData": imgEncBase64, "promptData": prompt})
-    print(response)
+    #print(response)
     return response
 
 
 # Apply LLM to each of the set to summarize the contents.
 def summarizeDatafromPDF(extractData):
-    prompt = """You are an experienced data analyst. You are collecting earning data of multiple companies. Read the metrics in the format of text and tables. carefully and summarize the tables and text relevant to financial performance of the company concisely. Table or text content are : {dataContent}"""
+    #prompt = """You are an experienced data analyst. You are collecting earning data of multiple companies. Read the metrics in the format of text and tables. carefully and summarize the tables and text relevant to financial performance of the company concisely. Table or text content are : {dataContent}"""
+    prompt = """You are an assistant tasked with summarizing tables and text. Summarize the content from table or text chunk. Pay attention to the term definition, numbers, list, all the key points, etc.  Table or text content are : {dataContent}"""
     promptTemplate = ChatPromptTemplate.from_template(prompt)
     llm = createModel()
     # Create chain to summarize the text data
@@ -162,7 +185,6 @@ def summarizeDatafromPDF(extractData):
         if st.session_state.summaryService == "OpenAI":
             promptTempwithImage = generateOpenAIImagePrompt()
             chat_prompt_template = ChatPromptTemplate.from_messages(promptTempwithImage)
-            print("OpenAI...")
             chain = chat_prompt_template | llm | StrOutputParser()
         response = chain.invoke({"imageData": imageBase64, "promptData": "Please describe the image and summarize the content concisely"})
         # print(response)
@@ -189,8 +211,12 @@ def retrieverGenerator(summarizedData):
         summary = summarizedData[key]["summary"]
         payload = summarizedData[key]["payload"]
         # print(f"This is the payload{summary}\n This is the original doc {payload}")
-        docs_ids = [str(uuid.uuid4()) for _ in summary]
-        print(f"The length of the summary list is {len(summary)}")
+        #docs_ids = [str(uuid.uuid4()) for _ in summary]
+        docs_ids = []
+        print(f"size of mediatype {len(mediaType)}. The size of summary {len(summary)}. The size of payload {len(payload)}")
+        for _ in summary:
+            iditem = str(uuid.uuid4())
+            docs_ids.append(iditem)
         # To avoid any empty list to crash the program
         if (len(summary) == 0):
             continue
@@ -205,29 +231,51 @@ def retrieverGenerator(summarizedData):
                Document(page_content=s, metadata={id_key: docs_ids[i], "mediaType": mediaType, "source": payload[i]})
                 for i, s in enumerate(summary)
             ]
+           for sumDoc in summaryDoc:
+               print("The page content is " + sumDoc.page_content)
         retriever.vectorstore.add_documents(summaryDoc)
         retriever.docstore.mset(list(zip(docs_ids, payload)))
+
+        for idr in docs_ids:
+            testresult = retriever.docstore.mget([idr])
+            print(f"check the result of id {idr}   {testresult}\n")
     # testresult = retriever.invoke("what's the total revenue")
+    #searchDocs = retriever.vectorstore.similarity_search("book")
+    #rec_id = searchDocs[0].metadata["rec_id"]
     st.session_state.vectorretriever = retriever
     # print(f"Here is the result\n{testresult}")
 
 
 def askLLM(query):
     retriever = st.session_state.vectorretriever
-    vectorSearch = retriever.invoke(query)
-    # context = vectorSearch[0]
+    searchDocs = retriever.vectorstore.similarity_search(query)
+    #print(f"This is the vector search result {searchDocs[0]}\n ")
+    imageData = []
+    txtData = []
+    for doc in searchDocs:
+        rec_id = doc.metadata["rec_id"]
+        mediaType = doc.metadata["mediaType"]
+        ctxContent = retriever.docstore.mget([rec_id])
+        print(f"This is the record content {rec_id}\n   {ctxContent}\n")
+        if(mediaType == "text"):
+            txtData.append(ctxContent[0])
+        elif(mediaType == "image"):
+            imageData.append(encodeImageBase64(ctxContent[0]))
     if (st.session_state.procAppr == "Extract data from PDF file"):
         template = """Answer the question based only on the following context, which can include text and tables:\n{context}\n\nQuestion: {question}"""
-        prompt = ChatPromptTemplate.from_template(template)
+#        prompt = ChatPromptTemplate.from_template(template)
         llmModel = ChatOllama(model="llama3:latest")
+
         set_verbose(True)
-        chain = (
-             {"context": retriever, "question": RunnablePassthrough()}
-            | prompt
-            | llmModel
-            | StrOutputParser()
-        )
-        response = chain.invoke(query)
+#        chain = (
+#             {"context": retriever, "question": RunnablePassthrough()}
+#            | prompt
+#            | llmModel
+#            | StrOutputParser()
+#        )
+        chain = generatePromptwithImageListTest | llmModel | StrOutputParser()
+        response = chain.invoke({"imageData": imageData, "txtData": txtData , "prompt": query})
+        #response = chain.invoke(query)
         set_verbose(False)
         return response
     else:
@@ -236,11 +284,11 @@ def askLLM(query):
         # llmModel = ChatOpenAI(model = "gpt-4o")
         modelService = st.session_state.serviceSel
         modelSelected = st.session_state.modelSel
-        queryPrompt = "Answer the question only according to the content in the image and output the answer in the format of markdown. Please say I don't know if there's no relevant content in the image. \n\nQuestion: " + query
+        queryPrompt = "Answer the question only according to the content in the provided contents including  image,text and tables output the answer in the format of markdown. Please say I don't know if there's no relevant content in the image. \n\nQuestion: " + query
         imagePathList = retriever.invoke(query)
         if (len(imagePathList) == 0):
             return "*No relevant doc retrieved*"
-        print(f"This is the retrieval result {imagePathList}\n")
+        print(f"This is the MultiVectorRetrieverval result {imagePathList}\n")
         imageContentList = []
         relevantImages = "<br /><br />  <h2>Below are the relevant images retrieved</h2>"
         for imagePath in imagePathList:
