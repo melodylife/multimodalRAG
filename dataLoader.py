@@ -16,8 +16,12 @@ import modelLever
 
 module_name = "dataLoader"
 
-# Extract data from PDFs and categorize them into sets of text, table and image respectively.
+#Turn the table data into string when calling chatbot
+def turnTbl2Str(tblData):
+    tblStr  = "\n".join([" | ".join(map(str, row)) for row in tblData])
+    return tblStr
 
+# Extract data from PDFs and categorize them into sets of text, table and image respectively.
 def ExtractDataFromPDF(pdfFileContent):
     # Extract elements from PDF file
     pdfLoader = fitz.open("pdf", io.BytesIO(pdfFileContent))
@@ -35,7 +39,9 @@ def ExtractDataFromPDF(pdfFileContent):
         #tables = pageContent.find_tables(strategy = "lines")
         for table in tables:
             # Save the content of table in the csv format in the list
-            tableElements.append(table.extract())
+            #tableElements.append(table.extract())
+            # Turn the table list into string for further use
+            tableElements.append(turnTbl2Str(table.extract()))
             #print(f"This is the table content {table.to_pandas()}")
         # Extract Images
         for imgIndex, imgData in enumerate(pageContent.get_images(), start=1):
