@@ -139,7 +139,6 @@ def drawUI(title):
         )
         st.divider()
         st.info(st.session_state.serviceInfo)
-        st.button("Change the Model", type="primary")
     if prompt := st.chat_input("Please share what do you want to know..."):
         st.chat_message("user").markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})

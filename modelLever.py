@@ -103,43 +103,34 @@ def generateOpenAIPromptwithImageList(importData):
         msgContent.append({"type": "text", "text": txtData})
     return [HumanMessage(content=msgContent)]
 
-def generateOpenAIPromptwithImageList(importData):
-    prompt = importData["promptData"]
-    imageData = importData["imageData"]
-    msgContent = []
-    msgContent.append({"type": "text", "text": prompt})
-    for img in imageData:
-        msgContent.append(
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}}
-        )
-    return [HumanMessage(content=msgContent)]
-
 # Create LLM model according to the options determined by users
 
 
-def createModel(modelService , model):
+def createModel(modelService , model , temp):
+    # The temperature by default Google 0.7, OpenAI 0.7, Ollama 0.8. For summary pipeline, I set them all to 0.8. But for the Q&A pipeline, you can set up by dragging the bar
     llm = {}
     #modelSel = st.session_state.summaryModelSel
     modelSel = model
     if modelService == "OpenAI":
-        llm = ChatOpenAI(model=modelSel)
+        llm = ChatOpenAI(model=modelSel , temperature = temp)
     elif modelService == "Google Gemini":
-        llm = ChatGoogleGenerativeAI(model=modelSel)
+        llm = ChatGoogleGenerativeAI(model=modelSel , temperature = temp)
         # llm = VertexAI(model_name=modelSel)
     elif modelService == "Ollama":
-        llm = ChatOllama(model=modelSel)
+        llm = ChatOllama(model=modelSel , temperature = temp)
     return llm
 
 
 def interpretImage(imgEncBase64):
     prompt = "You will be presented with multiple file pages. The pages will be including texts, tables ,chart and images. Describe the page contents by extracting the information from it and summarize the the content with key information like name, subject, metrics, chart, table content from it."
-    llm = createModel(st.session_state.summaryService , st.session_state.summaryModelSel)
+    # For the summarization, temperature is set to 0.8 by default
+    llm = createModel(st.session_state.summaryService , st.session_state.summaryModelSel , 0.8)
     if st.session_state.summaryService == "OpenAI":
         promptTempwithImage = generateOpenAIImagePrompt()
         chat_prompt_template = ChatPromptTemplate.from_messages(promptTempwithImage)
         # Use ChatOpenAI instead of OpenAI to leverage the vision model. Otherwise the call will fail definitely. Remember to resize the image before calling
         # OpenAI as OpenAI only accept the image size smaller than 2000x768 and larger than 512x512
-        chain = chat_prompt_template | llm | StrOutputParser()
+        chain = chat_prompt_template | llm | StrOutputParser(1.)
         response = chain.invoke({"imageData": imgEncBase64, "promptData": prompt})
         return response
     chain = generatePrompt | llm | StrOutputParser()
@@ -151,7 +142,8 @@ def interpretImage(imgEncBase64):
 def summarizeDatafromPDF(extractData):
     prompt = """You are an assistant tasked with summarizing tables, text and images. Summarize the content from table, text and image chunks. Pay attention to the term definition, time period, numbers, list, all the key points, etc.  Table or text content are : {dataContent}"""
     promptTemplate = ChatPromptTemplate.from_template(prompt)
-    llm = createModel(st.session_state.summaryService , st.session_state.summaryModelSel)
+    # For the summarization, temperature is set to 0.8 by default
+    llm = createModel(st.session_state.summaryService , st.session_state.summaryModelSel , 0.8)
     # Create chain to summarize the text data
     summarizeChain = {"dataContent": lambda x: x} | promptTemplate | llm | StrOutputParser()
     # print(type(extractData["textElements"]))
@@ -240,11 +232,11 @@ def askLLM(query):
             imgB64Enc = encodeImageBase64(ctxContent[0])
             imageData.append(imgB64Enc)
             relevantImages = relevantImages + f"<br /><br /><img   width=\"60%\" height=\"30%\"  src=\"data:image/jpeg;base64,{imgB64Enc}\">  "
-    llmModel = createModel(st.session_state.serviceSel , st.session_state.modelSel)
+    llmModel = createModel(st.session_state.serviceSel , st.session_state.modelSel , st.session_state.tempSel)
     chain = {}
     modelService = st.session_state.serviceSel
     modelSelected = st.session_state.modelSel
-    queryPrompt = "Answer the question only according to the content in the provided contents including  image,text and tables output the answer in the format of markdown. Please say I don't know if there's no relevant content in the image. \n\nQuestion: " + query
+    queryPrompt = "Answer the question only according to the content in the provided context including  images, texts and tables. Output the answer in the format of markdown. Please say I don't know if there's no relevant content in the image. \n\nQuestion: " + query
     if (modelService == "OpenAI"):
         chain = generateOpenAIPromptwithImageList | llmModel | StrOutputParser()
     else:
