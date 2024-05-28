@@ -2,6 +2,7 @@
 
 import streamlit as st
 import json
+import time
 import dataLoader
 import modelLever
 
@@ -110,10 +111,15 @@ def drawUI(title):
             index=None
         )
         pdfFile = st.file_uploader("Upload your pdf file  from here" , key = "fileuploader", type=["pdf"], disabled=st.session_state.uploaderDisabled)
+        elapsedTime = 0
         if (pdfFile is not None) and (st.session_state.summaryModelSel != "Please select the model") and (st.session_state.uploaderDisabled == False):
+            startTime = time.perf_counter()
             with st.spinner("Processing PDF..."):
                 dataLoader.processData(pdfFile)
                 st.session_state.uploaderDisabled = True
+            endTime = time.perf_counter()
+            elapsedTime = endTime - startTime
+        st.info(f"The time cost {round(elapsedTime , 2)}s" , icon= "⏲️")
         st.divider()
         # Below are the model service options of RAG query
         st.selectbox(
@@ -137,8 +143,6 @@ def drawUI(title):
             disabled=st.session_state.modelSelDisabled,
             key="tempSel"
         )
-        st.divider()
-        st.info(st.session_state.serviceInfo)
     if prompt := st.chat_input("Please share what do you want to know..."):
         st.chat_message("user").markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})

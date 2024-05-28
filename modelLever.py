@@ -78,8 +78,6 @@ def generatePrompt(importData):
     return [HumanMessage(content=content_parts)]
 
 # generate multimodal prompt template for OpenAI
-
-
 def generateOpenAIImagePrompt():
     image_prompt_template = ImagePromptTemplate(
         input_variables=["imageData"],
