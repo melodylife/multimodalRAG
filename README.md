@@ -30,3 +30,13 @@ python3.12 -m  streamlit run demo.py
 ```
 
 ## Configuration before running
+# Summarize the data 
+
+<img width="1471" alt="截屏2024-05-31 16 40 43" src="https://github.com/melodylife/multimodalRAG/assets/2402592/f26a14f5-2cab-4686-a2c9-b031276a7b33">
+
+Configure summary model options by selecting options from the boxes. 
+
+# Start Q&A
+<img width="1182" alt="截屏2024-05-31 16 51 31" src="https://github.com/melodylife/multimodalRAG/assets/2402592/2a3dc1e0-48f0-44be-a1f3-8f3e4856611c">
+Once the data are succesfully processed configure the LLM model and relevant parameters for the RAG Q&A
+
