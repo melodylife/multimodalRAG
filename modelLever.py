@@ -128,7 +128,7 @@ def interpretImage(imgEncBase64):
         chat_prompt_template = ChatPromptTemplate.from_messages(promptTempwithImage)
         # Use ChatOpenAI instead of OpenAI to leverage the vision model. Otherwise the call will fail definitely. Remember to resize the image before calling
         # OpenAI as OpenAI only accept the image size smaller than 2000x768 and larger than 512x512
-        chain = chat_prompt_template | llm | StrOutputParser(1.)
+        chain = chat_prompt_template | llm | StrOutputParser()
         response = chain.invoke({"imageData": imgEncBase64, "promptData": prompt})
         return response
     chain = generatePrompt | llm | StrOutputParser()
