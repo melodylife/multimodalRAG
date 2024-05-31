@@ -75,6 +75,9 @@ def initSession():
     # Add a blob to store the retriever
     if "vectorretriever" not in st.session_state:
         st.session_state.vectorretriever = {}
+    # Time elapsed when processing pdf file
+    if "timeelapsed" not in st.session_state:
+        st.session_state.timeelapsed = 0
 
 
 def drawUI(title):
@@ -119,7 +122,8 @@ def drawUI(title):
                 st.session_state.uploaderDisabled = True
             endTime = time.perf_counter()
             elapsedTime = endTime - startTime
-        st.info(f"The time cost {round(elapsedTime , 2)}s" , icon= "⏲️")
+            st.session_state.timeelapsed = elapsedTime 
+        st.info(f"The time cost {round(st.session_state.timeelapsed, 2)}s" , icon= "⏲️")
         st.divider()
         # Below are the model service options of RAG query
         st.selectbox(
